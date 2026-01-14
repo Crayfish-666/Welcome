@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crayfish's Home</title>
+    <style>
+        /* --- 1. 核心设置：蓝紫基调 --- */
+        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+
+        :root {
+            --bg-deep: #0b0c15; /* 深色背景 */
+            --glass-panel: rgba(22, 33, 62, 0.6); /* 蓝调磨砂 */
+            --glass-border: rgba(100, 115, 255, 0.2);
+            
+            /* 核心霓虹色 */
+            --neon-blue: #4d4dff;
+            --neon-purple: #b026ff;
+            --neon-cyan: #00e5ff;
+            --text-main: #e1e1e6;
+            --text-dim: #9499b7;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            cursor: none; /* 保持隐藏鼠标 */
+        }
+
+        body {
+            background-color: var(--bg-deep);
+            background-image: radial-gradient(circle at 50% 50%, #1a1b3a 0%, #0b0c15 80%);
+            font-family: 'Rajdhani', sans-serif;
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* --- 2. 动态背景 (保留但颜色调整) --- */
+        #canvas-bg {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 0;
+            opacity: 0.6; /* 让背景稍微暗一点，突出前景 */
+        }
+
+        /* --- 3. 光标 --- */
+        .cursor {
+            width: 20px; height: 20px;
+            border: 2px solid var(--neon-purple);
+            border-radius: 50%;
+            position: absolute;
+            pointer-events: none;
+            z-index: 9999;
+            transform: translate(-50%, -50%);
+            transition: all 0.1s;
+            mix-blend-mode: screen;
+            box-shadow: 0 0 10px var(--neon-purple);
+        }
+        .cursor.hovered {
+            width: 40px; height: 40px;
+            background: rgba(176, 38, 255, 0.2);
+            border-color: var(--neon-cyan);
+        }
+
+        /* --- 4. 主容器：Steam 风格布局 --- */
+        .profile-container {
+            width: 900px;
+            max-width: 95%;
+            height: auto;
+            min-height: 500px;
+            background: rgba(13, 14, 28, 0.7);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            box-shadow: 0 0 50px rgba(77, 77, 255, 0.15), inset 0 0 100px rgba(0,0,0,0.5);
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            z-index: 10;
+            position: relative;
+            /* 3D 效果容器 */
+            transform-style: preserve-3d;
+            transition: transform 0.2s ease-out;
+        }
+
+        /* 顶部装饰条 (Steam Header) */
+        .profile-header {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding-bottom: 1.5rem;
+        }
+
+        /* 头像框 */
+        .avatar-box {
+            position: relative;
+            width: 160px;
+            height: 160px;
+            flex-shrink: 0;
+        }
+        .avatar-img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            border: 2px solid var(--neon-purple);
+            box-shadow: 0 0 20px rgba(176, 38, 255, 0.4);
+            /* 方形头像，Steam 风格 */
+            border-radius: 4px; 
+        }
+        .status-dot {
+            position: absolute;
+            bottom: -5px; right: -5px;
+            width: 20px; height: 20px;
+            background: #00ff00; /* 在线状态 */
+            border: 3px solid var(--bg-deep);
+            border-radius: 50%;
+            box-shadow: 0 0 10px #00ff00;
+        }
+
+        /* 用户信息区 */
+        .user-info {
+            flex-grow: 1;
+            padding-top: 10px;
+        }
+        .username {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: white;
+            text-shadow: 0 0 15px var(--neon-blue);
+            margin-bottom: 5px;
+        }
+        .user-status {
+            color: var(--neon-cyan);
+            font-size: 1.1rem;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+        }
+        .bio-text {
+            color: var(--text-dim);
+            font-size: 0.95rem;
+            line-height: 1.5;
+            max-width: 500px;
+        }
+
+        /* 等级圆环 (Steam Level) */
+        .level-badge {
+            width: 70px; height: 70px;
+            border-radius: 50%;
+            border: 3px solid var(--neon-purple);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            background: rgba(0,0,0,0.3);
+            box-shadow: 0 0 15px var(--neon-purple);
+            margin-left: auto; /* 推到右边 */
+        }
+        .level-num {
+            font-size: 1.8rem;
+            font-weight: bold;
+            font-family: 'JetBrains Mono', monospace;
+            text-shadow: 0 0 15px var(--neon-blue);
+            margin-bottom: 5px;
+            line-height: 1;
+        }
+        .level-label {
+            font-size: 0.6rem;
+            color: var(--neon-purple);
+            text-transform: uppercase;
+        }
+
+        /* --- 5. 内容模块区 (Grid Layout) --- */
+        .profile-body {
+            display: grid;
+            grid-template-columns: 2fr 1fr; /* 左宽右窄，像 Steam */
+            gap: 1.5rem;
+        }
+
+        .panel-box {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255,255,255,0.05);
+            padding: 1rem;
+            border-radius: 6px;
+        }
+        
+        .panel-title {
+            color: white;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .panel-title span { color: var(--neon-cyan); }
+
+        /* 技能徽章墙 */
+        .badge-grid {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .badge:hover {
+            background: var(--neon-blue);
+            color: white;
+            box-shadow: 0 0 15px var(--neon-blue);
+        }
+        
+        /* 展柜 (Showcase) */
+        .showcase-item {
+            background: rgba(255,255,255,0.05);
+            margin-bottom: 10px;
+            padding: 10px;
+            border-left: 3px solid var(--neon-purple);
+            transition: 0.3s;
+        }
+        .showcase-item:hover {
+            background: rgba(176, 38, 255, 0.1);
+            transform: translateX(5px);
+        }
+        .showcase-title { color: white; font-weight: bold; font-size: 1rem; }
+        .showcase-desc { color: #888; font-size: 0.8rem; }
+
+        /* 链接按钮组 */
+        .action-btn {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            text-align: center;
+            text-decoration: none;
+            background: linear-gradient(90deg, rgba(77,77,255,0.2), transparent);
+            border: 1px solid var(--neon-blue);
+            color: white;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        .action-btn:hover {
+            background: var(--neon-blue);
+            box-shadow: 0 0 20px rgba(77,77,255,0.5);
+        }
+
+        /* 响应式 */
+        @media (max-width: 800px) {
+            .profile-body { grid-template-columns: 1fr; }
+            .profile-header { flex-direction: column; align-items: center; text-align: center; }
+            .level-badge { margin: 10px auto; }
+            .profile-container { height: 90vh; overflow-y: auto; }
+        }
+        .level-ring {
+            position: relative;
+            width: 85px; height: 85px;
+            border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            padding: 4px;
+            background: rgba(0,0,0,0.4);
+            /* 渐变流光动画 */
+            background-image: linear-gradient(var(--bg-deep), var(--bg-deep)), 
+                              conic-gradient(from 0deg, var(--neon-cyan), var(--neon-purple), var(--neon-blue), var(--neon-cyan));
+            background-origin: border-box;
+            background-clip: content-box, border-box;
+            animation: rotate-hue 4s linear infinite;
+            box-shadow: 0 0 20px rgba(100, 100, 255, 0.3);
+            margin-left: auto;
+        }
+        @keyframes rotate-hue { 100% { filter: hue-rotate(360deg); } }
+        
+    </style>
+</head>
+<body>
+
+    <canvas id="canvas-bg"></canvas>
+    
+    <div class="cursor"></div>
+
+    <div class="profile-container" id="profile-card">
+        
+        <div class="profile-header">
+            <div class="avatar-box">
+                <img src="https://avatars.akamai.steamstatic.com/3ca712b38239eef8e575db829bd79786ad785948_full.jpg" class="avatar-img hover-target">
+                <div class="status-dot" title="Online"></div>
+            </div>
+            
+            <div class="user-info">
+                <div class="username hover-target">Crayfish</div>
+                <div class="user-status">Currently Coding...</div>
+                <div class="bio-text">
+                    本声明由Crayfish（以下简称“声明方”）于所有可能的时间线同时发布，适用于一切已知与未知的宇宙、多元宇宙、平行维度及任何存在层面。
+声明方对因接触本声明（包括阅读、引用、思考或任何形式互动）而产生的任何后果不承担责任，包括但不限于：物理、心理、形而上学变动；存在危机、文明崩塌、宇宙重启；时间悖论、现实重写；以及物质、能量、信息、灵魂、自由意志或任何形式的损失。
+存在即风险，观测即干扰。本声明自所有可能的大爆炸起永久生效。
+继续存在即视为无条件接受本声明。
+——Crayfish
+永恒中立、彻底免责的宇宙级声明方
+于所有时间与空间的交汇处
+                    <span style="color:var(--neon-purple)">#Crayfish #Suckmydick</span>
+                </div>
+            </div>
+
+            <div class="level-ring hover-target">
+                <div style="text-align: center;">
+                    <span class="level-num">8888</span>
+                    <span class="level-label">Level</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="profile-body">
+            
+            <div class="left-col">
+                <div class="panel-box" style="margin-bottom: 1.5rem;">
+                    <div class="panel-title">Project Showcase <span>WORKSHOP</span></div>
+                    
+                    <div class="showcase-item hover-target">
+                        <div class="showcase-title">虚空行者</div>
+                        <div class="showcase-desc">游走于代码与现实的夹缝之间，能在无人注意的瞬间重构整个系统架构，留下只有高手才能读懂的痕迹。</div>
+                    </div>
+                    <div class="showcase-item hover-target">
+                        <div class="showcase-title">反恐幻神</div>
+                        <div class="showcase-desc">Counter-Strike 2 的都市传说，AWP 与 AK 是其延伸肢体，每一颗子弹都携带着绝对的胜者宣言。</div>
+                    </div>
+                    <div class="showcase-item hover-target">
+                        <div class="showcase-title">终极免责者</div>
+                        <div class="showcase-desc">发布过宇宙级免责声明的那位存在，无论系统崩塌、deadline 爆炸或宇宙重启，永不背锅。</div>
+                    </div>
+                </div>
+
+                <div class="panel-box">
+                    <div class="panel-title">Skill Badges <span>COLLECTOR</span></div>
+                    <div class="badge-grid">
+                        <div class="badge hover-target">☕ JAVA</div>
+                        <div class="badge hover-target">🐍 PYTHON</div>
+                        <div class="badge hover-target">⚛️ REACT</div>
+                        <div class="badge hover-target">🎨 FIGMA</div>
+                        <div class="badge hover-target">🐳 DOCKER</div>
+                        <div class="badge hover-target">🔒 SECURITY</div>
+                        <div class="badge hover-target">🟨 JS</div>
+                        <div class="badge hover-target">💚 VUE</div>
+                        <div class="badge hover-target">🗃️ SQL</div>
+                        <div class="badge hover-target">🦸 OVERWATCH</div>
+                        <div class="badge hover-target">🔫 COUNTER-STRIKE 2</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="right-col">
+                <div class="panel-box">
+                    <div class="panel-title">Links</div>
+                    <a href="https://github.com/Crayfish-666" class="action-btn hover-target">GITHUB</a>
+                    <a href="https://steamcommunity.com/profiles/76561199505960692/" class="action-btn hover-target">STEAM</a>
+                    <a href="https://space.bilibili.com/506475215?spm_id_from=333.1007.0.0" class="action-btn hover-target">BILIBILI</a>
+                </div>
+
+                <div class="panel-box" style="margin-top: 1rem; text-align: center;">
+                    <div class="panel-title" style="justify-content: center;">System Status</div>
+                    <div style="font-size: 2rem; color: var(--neon-cyan); font-family: 'JetBrains Mono'; font-weight: bold;">
+                        <span id="ping">24</span>ms
+                    </div>
+                    <div style="font-size: 0.8rem; color: #666;">LATENCY TO SERVER</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. 粒子背景 (调整为蓝紫色系) ---
+        const canvas = document.getElementById('canvas-bg');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let particlesArray;
+        let mouse = { x: null, y: null };
+
+        window.addEventListener('mousemove', function(event) {
+            mouse.x = event.x;
+            mouse.y = event.y;
+        });
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 2 + 0.5;
+                this.speedX = Math.random() * 1 - 0.5;
+                this.speedY = Math.random() * 1 - 0.5;
+                // 随机蓝色或紫色
+                this.color = Math.random() > 0.5 ? '#4d4dff' : '#b026ff'; 
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                if (this.x > canvas.width || this.x < 0) this.speedX = -this.speedX;
+                if (this.y > canvas.height || this.y < 0) this.speedY = -this.speedY;
+            }
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function init() {
+            particlesArray = [];
+            for (let i = 0; i < 100; i++) {
+                particlesArray.push(new Particle());
+            }
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let i = 0; i < particlesArray.length; i++) {
+                particlesArray[i].update();
+                particlesArray[i].draw();
+                
+                // 连线效果 (弱化连线，增强氛围感)
+                for (let j = i; j < particlesArray.length; j++) {
+                    const dx = particlesArray[i].x - particlesArray[j].x;
+                    const dy = particlesArray[i].y - particlesArray[j].y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    if (distance < 100) {
+                        ctx.strokeStyle = `rgba(100, 100, 255, ${1 - distance/100})`;
+                        ctx.lineWidth = 0.5;
+                        ctx.beginPath();
+                        ctx.moveTo(particlesArray[i].x, particlesArray[i].y);
+                        ctx.lineTo(particlesArray[j].x, particlesArray[j].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+            requestAnimationFrame(animate);
+        }
+        init();
+        animate();
+
+        // --- 2. 3D 容器微动效果 (模拟手持卡片的感觉) ---
+        const card = document.getElementById('profile-card');
+        document.addEventListener('mousemove', (e) => {
+            const xAxis = (window.innerWidth / 2 - e.pageX) / 50; // 减小幅度
+            const yAxis = (window.innerHeight / 2 - e.pageY) / 50;
+            card.style.transform = `perspective(1000px) rotateY(${xAxis}deg) rotateX(${yAxis}deg)`;
+        });
+
+        // --- 3. 模拟 Ping 值跳动 ---
+        setInterval(() => {
+            const ping = Math.floor(Math.random() * 15) + 20; // 20-35ms
+            document.getElementById('ping').innerText = ping;
+        }, 2000);
+
+        // --- 4. 光标逻辑 ---
+        const cursor = document.querySelector('.cursor');
+        document.addEventListener('mousemove', e => {
+            cursor.style.top = e.pageY + 'px';
+            cursor.style.left = e.pageX + 'px';
+        });
+        document.querySelectorAll('.hover-target').forEach(link => {
+            link.addEventListener('mouseenter', () => cursor.classList.add('hovered'));
+            link.addEventListener('mouseleave', () => cursor.classList.remove('hovered'));
+        });
+
+        // 窗口调整
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            init();
+        });
+    </script>
+</body>
+</html>
